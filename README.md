@@ -2,6 +2,21 @@
 
 Backend API for the ThermalPaste community platform.
 
+## Architecture (MVP / Layered)
+
+The `/health` route is split across the MVP layers:
+
+```
+src/
+├── services/      # Model/Logic  - healthService.js
+├── controllers/   # Presenter    - healthController.js
+├── routes/        # View         - healthRoutes.js
+├── middleware/    # logger
+├── util/          # response helpers
+└── app.js         # App assembly (wires routes + middleware)
+server.js          # Entry point (starts server)
+```
+
 ## Setup
 
 1. Install dependencies:
@@ -9,9 +24,9 @@ Backend API for the ThermalPaste community platform.
 npm install
 ```
 
-2. Create a `.env` file based on `.env.example`:
-```bash
-cp .env.example .env
+2. Create a `.env` file:
+```
+PORT=4000
 ```
 
 3. Start the development server:
@@ -19,32 +34,11 @@ cp .env.example .env
 npm run dev
 ```
 
-## API Endpoints
+## Health Check
 
-### Users
-- `POST /api/users/register` - Register a new user
-- `POST /api/users/login` - Login user
-- `GET /api/users/:id` - Get user by ID
-- `PUT /api/users/:id` - Update user
-
-### Communities
-- `GET /api/communities` - Get all communities
-- `GET /api/communities/:groupId` - Get community by groupId
-- `POST /api/communities` - Create community (authenticated)
-
-### Posts
-- `GET /api/posts/:id` - Get post by ID
-- `POST /api/posts` - Create post (authenticated)
-- `PUT /api/posts/:id/vote` - Vote on post (authenticated)
-
-### Comments
-- `GET /api/comments/:postId` - Get comments for a post
-- `POST /api/comments/:postId` - Create comment (authenticated)
+- `GET /health` - Returns server status, uptime, and timestamp
 
 ## Tech Stack
 
 - Node.js
 - Express
-- MongoDB (Mongoose)
-- JWT Authentication
-- bcrypt

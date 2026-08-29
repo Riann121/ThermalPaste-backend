@@ -4,17 +4,20 @@
   "main": "server.js",
   "scripts": {
     "dev": "nodemon server.js",
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "node --test src/tests/health.test.js"
   },
   "dependencies": {
-    "express": "",
-    "mongoose": "",
-    "dotenv": "",
-    "cors": "",
-    "bcrypt": "",
-    "jsonwebtoken": ""
+    "colors": "^1.4.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2"
   },
   "devDependencies": {
-    "nodemon": ""
-  }
+    "nodemon": "^3.0.1"
+  },
+  "description": "Backend API for the ThermalPaste community platform.",
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
 }

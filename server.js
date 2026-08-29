@@ -1,23 +1,22 @@
+/**
+ * server.js
+ * Application entry point.
+ * Loads environment variables, builds the app, and starts listening.
+ */
 require("dotenv").config();
-const express = require("express");
-const cors = require("cors");
-const connectDB = require("./config/db");
-const errorHandler = require("./middlewares/errorMiddleware");
+const createApp = require("./src/app");
+const { success, info } = require("./src/util/logger");
 
-// connectDB();
-
-const app = express();
-app.use(cors());
-app.use(express.json());
-
-app.get("/health", (req, res) => res.json({ ok: true }));
-
-// app.use("/api/users", require("./routes/userRoutes"));
-// app.use("/api/communities", require("./routes/communityRoutes"));
-// app.use("/api/posts", require("./routes/postRoutes"));
-// app.use("/api/comments", require("./routes/commentRoutes"));
-
-app.use(errorHandler);
-
+// Port defaults to 4000 unless overridden in the environment
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => console.log(`Server on ${PORT}`));
+
+// Build the Express app from the factory
+const app = createApp();
+
+// Start the HTTP server and log startup details
+app.listen(PORT, () => {
+  info(`Environment: ${process.env.NODE_ENV || "development"}`);
+  success(`Server running on http://localhost:${PORT}`);
+});
+
+module.exports = app;
