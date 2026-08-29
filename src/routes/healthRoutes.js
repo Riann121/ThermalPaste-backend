@@ -1,13 +1,10 @@
-/**
- * healthRoutes
- * View layer for the health feature.
- * Maps HTTP endpoints to their controller handlers.
- */
-const express = require("express");
+// Defines health HTTP routes.
+import express from "express";
+import { check } from "../controllers/healthController.js";
+
 const router = express.Router();
-const healthController = require("../controllers/healthController");
 
-// Mounted at "/health" by app.js, so this handles GET /health
-router.get("/", healthController.check);
+// GET /health
+router.get("/health", check);
 
-module.exports = router;
+export default router;

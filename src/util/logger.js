@@ -1,16 +1,7 @@
-/**
- * logger.js (util)
- * Custom colored server loggers used for startup and lifecycle messages.
- */
-const colors = require("colors");
+// Colored server loggers for lifecycle messages.
+import colors from "colors";
 
-// Informational message (cyan)
-const info = (msg) => console.log(colors.cyan(`[INFO]  ${msg}`));
-// Success message (green background, black text)
-const success = (msg) => console.log(colors.bgGreen.black(`[OK]    ${msg}`));
-// Warning message (yellow)
-const warn = (msg) => console.log(colors.yellow(`[WARN]  ${msg}`));
-// Error message (red)
-const error = (msg) => console.log(colors.red(`[ERROR] ${msg}`));
-
-module.exports = { info, success, warn, error };
+export const info = (msg) => console.log(colors.cyan(`[INFO]  ${msg}`));
+export const success = (msg) => console.log(colors.bgGreen.black(`[OK]    ${msg}`));
+export const warn = (msg) => console.log(colors.yellow(`[WARN]  ${msg}`));
+export const error = (msg) => console.log(colors.red(`[ERROR] ${msg}`));
