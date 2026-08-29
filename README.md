@@ -20,16 +20,19 @@ server.js          # Entry point (starts server)
 ## Setup
 
 1. Install dependencies:
+
 ```bash
 npm install
 ```
 
 2. Create a `.env` file:
+
 ```
 PORT=4000
 ```
 
 3. Start the development server:
+
 ```bash
 npm run dev
 ```
