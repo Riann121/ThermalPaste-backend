@@ -11,6 +11,17 @@ export default function checkToken(req, res, next) {
 
   jwt.verify(token, process.env.JWT_SECRET, {}, (err, user) => {
     if (err) {
+      // Token expired: send the login page redirect link from env.
+      if (err.name === "TokenExpiredError") {
+        return ErrorHandler(
+          res,
+          401,
+          "Token expired",
+          err,
+          "user-service",
+          process.env.LOGIN_REDIRECT_URL,
+        );
+      }
       return ErrorHandler(res, 401, "Invalid token");
     }
     req.user = user;
