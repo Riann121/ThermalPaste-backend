@@ -103,11 +103,7 @@ export async function login(req, res, next) {
 
 // POST /logout
 export function logout(req, res) {
-  res.clearCookie("token", {
-    httpOnly: true,
-    secure: false,
-    sameSite: "lax",
-  });
+  res.clearCookie("token", COOKIE_OPTIONS);
 
   return SuccessHandler(null, res, 200, "Logged out successfully");
 }
