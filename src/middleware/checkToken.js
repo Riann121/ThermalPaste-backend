@@ -1,25 +1,19 @@
+// Verifies the JWT and attaches the decoded user to the request. Does not remove the token.
 import jwt from "jsonwebtoken";
+import { ErrorHandler } from "../util/errorHandler.js";
 
-const checkToken = (req, res, next) => {
+export default function checkToken(req, res, next) {
   const token = req.cookies?.token;
 
   if (!token) {
-    return res.status(401).json({ error: "Invalid token" });
+    return ErrorHandler(res, 401, "Invalid token");
   }
 
   jwt.verify(token, process.env.JWT_SECRET, {}, (err, user) => {
     if (err) {
-      res.clearCookie("token", {
-        httpOnly: true,
-        secure: false,
-        sameSite: "lax",
-        path: "/",
-      });
-      return res.status(401).json({ error: "Invalid token" });
+      return ErrorHandler(res, 401, "Invalid token");
     }
     req.user = user;
     next();
   });
-};
-
-export default checkToken;
+}
