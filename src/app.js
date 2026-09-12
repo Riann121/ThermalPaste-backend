@@ -6,6 +6,7 @@ import mongoose from "mongoose";
 import logger from "./middleware/logger.js";
 import authRoutes from "./routes/authRouter.js";
 import healthRoutes from "./routes/healthRoutes.js";
+import profileRoutes from "./routes/profileRoutes.js";
 import { ErrorHandler } from "./util/errorHandler.js";
 
 export default function createApp() {
@@ -34,6 +35,7 @@ export default function createApp() {
   app.use(logger);
   app.use(healthRoutes);
   app.use("/api/auth", authRoutes);
+  app.use("/api/profile", profileRoutes);
   app.use(authRoutes);
 
   app.use((req, res) => ErrorHandler(res, 404, "Not found"));

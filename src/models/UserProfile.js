@@ -13,6 +13,51 @@ const userProfileSchema = new mongoose.Schema(
       trim: true,
       default: "",
     },
+    bio: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    cpu: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    gpu: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    ram: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    motherboard: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    customCooler: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    pcCase: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    powerSupply: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    storage: {
+      type: String,
+      trim: true,
+      default: "",
+    },
   },
   { timestamps: true },
 );
