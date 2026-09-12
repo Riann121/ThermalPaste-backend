@@ -41,6 +41,10 @@ export async function register(req, res, next) {
       password: hashedPassword,
     });
 
+    // Clear any prior or stale session cookies
+    res.clearCookie("accessToken", CLEAR_COOKIE_OPTIONS);
+    res.clearCookie("refreshToken", CLEAR_REFRESH_COOKIE_OPTIONS);
+
     return SuccessHandler(
       {
         user: {
@@ -154,27 +158,38 @@ export async function refresh(req, res, next) {
     try {
       decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
     } catch (err) {
+      res.clearCookie("accessToken", CLEAR_COOKIE_OPTIONS);
+      res.clearCookie("refreshToken", CLEAR_REFRESH_COOKIE_OPTIONS);
       return ErrorHandler(res, 401, "Invalid or expired refresh token", err);
     }
 
     const user = await User.findById(decoded.id);
     if (!user) {
+      res.clearCookie("accessToken", CLEAR_COOKIE_OPTIONS);
+      res.clearCookie("refreshToken", CLEAR_REFRESH_COOKIE_OPTIONS);
       return ErrorHandler(res, 401, "User not found");
     }
 
     // Stateful revocation check via tokenVersion
     if (decoded.tokenVersion !== undefined && user.tokenVersion !== undefined) {
       if (decoded.tokenVersion !== user.tokenVersion) {
+        res.clearCookie("accessToken", CLEAR_COOKIE_OPTIONS);
+        res.clearCookie("refreshToken", CLEAR_REFRESH_COOKIE_OPTIONS);
         return ErrorHandler(res, 401, "Refresh token has been revoked");
       }
     }
 
-    const accessToken = generateAccessToken(user);
-    res.cookie("accessToken", accessToken, COOKIE_OPTIONS);
+    // Refresh token rotation: issue new access token and rotate refresh token
+    const newAccessToken = generateAccessToken(user);
+    const newRefreshToken = generateRefreshToken(user);
+
+    res.cookie("accessToken", newAccessToken, COOKIE_OPTIONS);
+    res.cookie("refreshToken", newRefreshToken, REFRESH_COOKIE_OPTIONS);
 
     return SuccessHandler(
       {
-        accessToken,
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken,
         user: {
           id: user._id,
           username: user.username,
@@ -189,3 +204,5 @@ export async function refresh(req, res, next) {
     next(error);
   }
 }
+
+
