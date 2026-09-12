@@ -1,12 +1,12 @@
-import cors from "cors";
 import cookieParser from "cookie-parser";
+import cors from "cors";
 import "dotenv/config";
 import express from "express";
-import logger from "./middleware/logger.js";
-import healthRoutes from "./routes/healthRoutes.js";
-import authRoutes from "./routes/authRouter.js";
-import { ErrorHandler } from "./util/errorHandler.js";
 import mongoose from "mongoose";
+import logger from "./middleware/logger.js";
+import authRoutes from "./routes/authRouter.js";
+import healthRoutes from "./routes/healthRoutes.js";
+import { ErrorHandler } from "./util/errorHandler.js";
 
 export default function createApp() {
   const app = express();
@@ -33,6 +33,7 @@ export default function createApp() {
   app.use(cookieParser());
   app.use(logger);
   app.use(healthRoutes);
+  app.use("/api/auth", authRoutes);
   app.use(authRoutes);
 
   app.use((req, res) => ErrorHandler(res, 404, "Not found"));
