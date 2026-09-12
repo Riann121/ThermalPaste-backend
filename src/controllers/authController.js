@@ -1,4 +1,5 @@
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 import User from "../models/Users.js";
 import { SuccessHandler } from "../util/successHandler.js";
 import { ErrorHandler } from "../util/errorHandler.js";
@@ -114,4 +115,77 @@ export function logout(req, res) {
   res.clearCookie("refreshToken", CLEAR_REFRESH_COOKIE_OPTIONS);
 
   return SuccessHandler(null, res, 200, "Logged out successfully");
+}
+
+// GET /me
+export async function me(req, res, next) {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return ErrorHandler(res, 404, "User not found");
+    }
+
+    return SuccessHandler(
+      {
+        user: {
+          id: user._id,
+          username: user.username,
+          email: user.email,
+        },
+      },
+      res,
+      200,
+      "User fetched successfully",
+    );
+  } catch (error) {
+    next(error);
+  }
+}
+
+// POST /refresh
+export async function refresh(req, res, next) {
+  try {
+    const refreshToken = req.cookies?.refreshToken;
+    if (!refreshToken) {
+      return ErrorHandler(res, 401, "Refresh token required");
+    }
+
+    let decoded;
+    try {
+      decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+    } catch (err) {
+      return ErrorHandler(res, 401, "Invalid or expired refresh token", err);
+    }
+
+    const user = await User.findById(decoded.id);
+    if (!user) {
+      return ErrorHandler(res, 401, "User not found");
+    }
+
+    // Stateful revocation check via tokenVersion
+    if (decoded.tokenVersion !== undefined && user.tokenVersion !== undefined) {
+      if (decoded.tokenVersion !== user.tokenVersion) {
+        return ErrorHandler(res, 401, "Refresh token has been revoked");
+      }
+    }
+
+    const accessToken = generateAccessToken(user);
+    res.cookie("accessToken", accessToken, COOKIE_OPTIONS);
+
+    return SuccessHandler(
+      {
+        accessToken,
+        user: {
+          id: user._id,
+          username: user.username,
+          email: user.email,
+        },
+      },
+      res,
+      200,
+      "Token refreshed successfully",
+    );
+  } catch (error) {
+    next(error);
+  }
 }
