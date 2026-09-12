@@ -69,7 +69,7 @@ export async function login(req, res, next) {
         { username: loginId },
         { email: loginId.toLowerCase() },
       ],
-    });
+    }).select("+password");
 
     if (!user) {
       return ErrorHandler(res, 401, "Invalid credentials");
