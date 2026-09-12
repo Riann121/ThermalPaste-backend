@@ -1,4 +1,3 @@
-// Verifies the JWT and attaches the decoded user to the request. Does not remove the token.
 import jwt from "jsonwebtoken";
 import { ErrorHandler } from "../util/errorHandler.js";
 
