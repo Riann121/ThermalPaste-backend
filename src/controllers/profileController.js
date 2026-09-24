@@ -5,14 +5,11 @@ import { ErrorHandler } from "../util/errorHandler.js";
 const ALLOWED_FIELDS = [
   "imageLink",
   "bio",
-  "cpu",
-  "gpu",
-  "ram",
-  "motherboard",
-  "customCooler",
-  "pcCase",
-  "powerSupply",
   "storage",
+  "groups",
+  "likedPosts",
+  "likedComments",
+  "comments",
 ];
 
 export async function createProfile(req, res, next) {

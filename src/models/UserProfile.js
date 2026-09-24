@@ -18,46 +18,30 @@ const userProfileSchema = new mongoose.Schema(
       trim: true,
       default: "",
     },
-    cpu: {
-      type: String,
-      trim: true,
-      default: "",
-    },
-    gpu: {
-      type: String,
-      trim: true,
-      default: "",
-    },
-    ram: {
-      type: String,
-      trim: true,
-      default: "",
-    },
-    motherboard: {
-      type: String,
-      trim: true,
-      default: "",
-    },
-    customCooler: {
-      type: String,
-      trim: true,
-      default: "",
-    },
-    pcCase: {
-      type: String,
-      trim: true,
-      default: "",
-    },
-    powerSupply: {
-      type: String,
-      trim: true,
-      default: "",
-    },
-    storage: {
-      type: String,
-      trim: true,
-      default: "",
-    },
+    groups: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Group",
+      },
+    ],
+    likedPosts: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Post",
+      },
+    ],
+    likedComments: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Comment",
+      },
+    ],
+    comments: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Comment",
+      },
+    ],
   },
   { timestamps: true },
 );
