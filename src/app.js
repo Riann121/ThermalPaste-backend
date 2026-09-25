@@ -7,6 +7,7 @@ import logger from "./middleware/logger.js";
 import authRoutes from "./routes/authRouter.js";
 import healthRoutes from "./routes/healthRoutes.js";
 import profileRoutes from "./routes/profileRoutes.js";
+import commentRoutes from "./routes/commentRoutes.js";
 import { ErrorHandler } from "./util/errorHandler.js";
 
 export default function createApp() {
@@ -36,6 +37,7 @@ export default function createApp() {
   app.use(healthRoutes);
   app.use("/api/auth", authRoutes);
   app.use("/api/profile", profileRoutes);
+  app.use("/api/comments", commentRoutes);
   app.use(authRoutes);
 
   app.use((req, res) => ErrorHandler(res, 404, "Not found"));
