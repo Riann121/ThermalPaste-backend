@@ -1,7 +1,6 @@
 import jwt from "jsonwebtoken";
-import { ErrorHandler } from "../util/errorHandler.js";
 
-export default function checkToken(req, res, next) {
+export default function optionalToken(req, res, next) {
   const authHeader = req.headers.authorization;
   const bearerToken =
     authHeader && authHeader.startsWith("Bearer ")
@@ -11,17 +10,13 @@ export default function checkToken(req, res, next) {
   const token = req.cookies?.accessToken || req.cookies?.token || bearerToken;
 
   if (!token) {
-    return ErrorHandler(res, 401, "Invalid token");
+    return next();
   }
 
   jwt.verify(token, process.env.JWT_SECRET, {}, (err, user) => {
-    if (err) {
-      if (err.name === "TokenExpiredError") {
-        return ErrorHandler(res, 401, "Token expired", err);
-      }
-      return ErrorHandler(res, 401, "Invalid token");
+    if (!err && user) {
+      req.user = user;
     }
-    req.user = user;
     next();
   });
 }

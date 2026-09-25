@@ -8,6 +8,7 @@ import authRoutes from "./routes/authRouter.js";
 import healthRoutes from "./routes/healthRoutes.js";
 import profileRoutes from "./routes/profileRoutes.js";
 import commentRoutes from "./routes/commentRoutes.js";
+import groupRoutes from "./routes/groupRoutes.js";
 import { ErrorHandler } from "./util/errorHandler.js";
 
 export default function createApp() {
@@ -38,6 +39,7 @@ export default function createApp() {
   app.use("/api/auth", authRoutes);
   app.use("/api/profile", profileRoutes);
   app.use("/api/comments", commentRoutes);
+  app.use("/api/groups", groupRoutes);
   app.use(authRoutes);
 
   app.use((req, res) => ErrorHandler(res, 404, "Not found"));
