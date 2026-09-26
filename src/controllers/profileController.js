@@ -2,6 +2,7 @@ import { UserProfile } from "../models/UserProfile.js";
 import { User } from "../models/Users.js";
 import { SuccessHandler } from "../util/successHandler.js";
 import { ErrorHandler } from "../util/errorHandler.js";
+import cloudinary from "../config/cloudinary.js";
 
 const ALLOWED_FIELDS = [
   "imageLink",
@@ -127,6 +128,37 @@ export async function deleteProfile(req, res, next) {
       res,
       200,
       "Profile deleted successfully",
+    );
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function uploadProfileImage(req, res, next) {
+  try {
+    if (!req.file) {
+      return ErrorHandler(res, 400, "No image file provided");
+    }
+
+    const imageUrl = req.file.path;
+
+    const profile = await UserProfile.findOneAndUpdate(
+      { user: req.user.id },
+      { $set: { imageLink: imageUrl } },
+      { new: true, runValidators: true },
+    )
+      .populate("user", "username email")
+      .populate("groups", "name category tagline groupIconLink bannerLink privacy");
+
+    if (!profile) {
+      return ErrorHandler(res, 404, "Profile not found");
+    }
+
+    return SuccessHandler(
+      { profile },
+      res,
+      200,
+      "Profile image uploaded successfully",
     );
   } catch (error) {
     next(error);
