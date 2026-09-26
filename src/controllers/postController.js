@@ -249,7 +249,7 @@ export async function createPost(req, res, next) {
       group: targetGroup._id,
       heading: heading.trim(),
       description: description?.trim() || "",
-      imageLink: imageLink?.trim() || "",
+      imageLink: req.file?.path || imageLink?.trim() || "",
     });
 
     const populated = await Post.findById(newPost._id)
@@ -361,7 +361,9 @@ export async function updatePost(req, res, next) {
       post.description = description.trim();
     }
 
-    if (imageLink !== undefined) {
+    if (req.file?.path) {
+      post.imageLink = req.file.path;
+    } else if (imageLink !== undefined) {
       post.imageLink = imageLink.trim();
     }
 
@@ -797,4 +799,68 @@ export async function getPostReaction(req, res, next) {
     next(error);
   }
 }
+
+// POST /api/posts/image (and POST /api/posts/:id/image)
+// Upload image to Cloudinary for a post
+export async function uploadPostImage(req, res, next) {
+  try {
+    if (!req.file) {
+      return ErrorHandler(res, 400, "No image file provided", undefined, "post-service");
+    }
+
+    const imageUrl = req.file.path;
+    const postId = req.params.id || req.body.postId;
+
+    if (postId && mongoose.Types.ObjectId.isValid(postId)) {
+      const post = await Post.findById(postId);
+      if (!post) {
+        return ErrorHandler(res, 404, "Post not found", undefined, "post-service");
+      }
+
+      if (post.user.toString() !== req.user.id) {
+        return ErrorHandler(
+          res,
+          403,
+          "Permission denied: You can only edit your own posts",
+          undefined,
+          "post-service",
+        );
+      }
+
+      post.imageLink = imageUrl;
+      await post.save();
+
+      const populated = await Post.findById(post._id)
+        .populate("user", "username")
+        .populate("group", "name category groupIconLink privacy");
+
+      const formatted = await formatPost(populated, req.user.id);
+      return SuccessHandler(
+        {
+          post: formatted,
+          imageUrl,
+          imageLink: imageUrl,
+        },
+        res,
+        200,
+        "Post image uploaded successfully",
+        "post-service",
+      );
+    }
+
+    return SuccessHandler(
+      {
+        imageUrl,
+        imageLink: imageUrl,
+      },
+      res,
+      200,
+      "Post image uploaded successfully",
+      "post-service",
+    );
+  } catch (error) {
+    next(error);
+  }
+}
+
 

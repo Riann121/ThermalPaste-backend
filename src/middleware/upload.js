@@ -32,4 +32,34 @@ export const upload = multer({
   },
 });
 
+const postStorage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: "thermalpaste/posts",
+    allowed_formats: ["jpg", "jpeg", "png", "webp"],
+    transformation: [
+      { quality: "auto" },
+      { fetch_format: "auto" },
+    ],
+    public_id: (req, file) => `post-${req.user?.id || "temp"}-${Date.now()}`,
+  },
+});
+
+export const uploadPost = multer({
+  storage: postStorage,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB for hardware/cooling pictures
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|webp/;
+    const extname = allowedTypes.test(file.originalname.toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+    if (extname && mimetype) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only images (jpeg, jpg, png, webp) are allowed"));
+    }
+  },
+});
+
 export default upload;

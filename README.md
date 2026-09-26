@@ -101,9 +101,11 @@ Base URL: `http://localhost:4000`
 | Method | Endpoint | Auth | Description |
 |---|---|---|---|
 | `GET` | `/api/posts` | `optionalToken` | Paginated cross-group main feed (`?page=1&limit=10&sort=new`) respecting privacy. |
-| `POST` | `/api/posts` | `checkToken` | Create a post in a public group or a private group where user is a member. |
+| `POST` | `/api/posts` | `checkToken` | Create a post in a public group or a private group where user is a member (supports JSON or multipart/form-data with image). |
+| `POST` | `/api/posts/image` | `checkToken` | Upload a post image directly to Cloudinary (`multipart/form-data` with `image`), returns `imageUrl`. |
+| `POST` | `/api/posts/:id/image` | `checkToken` | Upload and set post image for an existing post (owner only). |
 | `GET` | `/api/posts/:id` | `optionalToken` | Get post details by ID with populated author avatar, group, and comments count. |
-| `PUT` | `/api/posts/:id` | `checkToken` | Edit post heading, description, or image (owner only). |
+| `PUT` | `/api/posts/:id` | `checkToken` | Edit post heading, description, or image (owner only; supports JSON or multipart/form-data with image). |
 | `DELETE`| `/api/posts/:id` | `checkToken` | Delete post and cascade delete related comments, bookmarks, and votes (owner only). |
 | `POST` | `/api/posts/:id/save` | `checkToken` | Toggle bookmark / saved status for the post. |
 | `POST` | `/api/posts/:id/react`| `checkToken` | React to a post (`upvote` or `downvote`, toggleable, alias: `/vote`). Updates `reactCount`. |
