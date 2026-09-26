@@ -1,4 +1,5 @@
 import { Comment } from "../models/Comment.js";
+import { Vote } from "../models/Vote.js";
 import { SuccessHandler } from "../util/successHandler.js";
 import { ErrorHandler } from "../util/errorHandler.js";
 
@@ -67,9 +68,15 @@ export async function createComment(req, res, next) {
     });
 
     const populated = await newComment.populate("user", "username");
+    const doc = populated.toObject ? populated.toObject() : { ...populated };
+    doc.upvotes = 0;
+    doc.downvotes = 0;
+    doc.userVote = 0;
+    doc.score = 0;
+    doc.replies = [];
 
     return SuccessHandler(
-      { comment: populated },
+      { comment: doc },
       res,
       201,
       resolvedParent ? "Reply created successfully" : "Comment created successfully",
@@ -87,10 +94,26 @@ export async function getComments(req, res, next) {
 
     const flat = await Comment.find({ post: postId })
       .populate("user", "username")
-      .populate("likes", "username")
+      .populate("votedBy.user", "username")
       .sort({ createdAt: 1 });
 
-    const tree = buildTree(flat);
+    // Add userVote for current user
+    const flatWithUserVote = flat.map((c) => {
+      const doc = c.toObject ? c.toObject() : { ...c };
+      let userVote = 0;
+      if (req.user?.id && doc.votedBy) {
+        const vote = doc.votedBy.find((v) => {
+          const voterId = v.user?._id?.toString?.() || v.user?.toString?.();
+          return voterId === req.user.id;
+        });
+        if (vote) userVote = vote.value;
+      }
+      doc.userVote = userVote;
+      doc.replies = [];
+      return doc;
+    });
+
+    const tree = buildTree(flatWithUserVote);
 
     return SuccessHandler(
       { comments: tree, count: flat.length },
@@ -124,9 +147,15 @@ export async function updateComment(req, res, next) {
     await existing.save();
 
     const populated = await existing.populate("user", "username");
+    const doc = populated.toObject ? populated.toObject() : { ...populated };
+    doc.upvotes = 0;
+    doc.downvotes = 0;
+    doc.userVote = 0;
+    doc.score = 0;
+    doc.replies = [];
 
     return SuccessHandler(
-      { comment: populated },
+      { comment: doc },
       res,
       200,
       "Comment updated successfully",
@@ -161,47 +190,6 @@ export async function deleteComment(req, res, next) {
       200,
       "Comment and its replies deleted successfully",
     );
-  } catch (error) {
-    next(error);
-  }
-}
-
-// POST /api/comments/:commentId/like
-// Toggles the current user's like on a comment.
-export async function likeComment(req, res, next) {
-  try {
-    const { commentId } = req.params;
-
-    const comment = await Comment.findById(commentId);
-    if (!comment) {
-      return ErrorHandler(res, 404, "Comment not found");
-    }
-
-    const userIdStr = req.user.id;
-    const alreadyLiked = comment.likes.some(
-      (id) => id.toString() === userIdStr,
-    );
-
-    if (alreadyLiked) {
-      comment.likes.pull(userIdStr);
-      await comment.save();
-      return SuccessHandler(
-        { comment, liked: false },
-        res,
-        200,
-        "Like removed",
-      );
-    } else {
-      comment.likes.push(userIdStr);
-      await comment.save();
-      const populated = await comment.populate("likes", "username");
-      return SuccessHandler(
-        { comment: populated, liked: true },
-        res,
-        200,
-        "Comment liked",
-      );
-    }
   } catch (error) {
     next(error);
   }
