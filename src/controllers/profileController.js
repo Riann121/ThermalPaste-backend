@@ -32,7 +32,7 @@ export async function createProfile(req, res, next) {
     const created = await UserProfile.create({ ...data, user: req.user.id });
     const profile = await UserProfile.findById(created._id)
       .populate("user", "username email")
-      .populate("groups", "name tagline groupIconLink bannerLink privacy");
+      .populate("groups", "name category tagline groupIconLink bannerLink privacy");
 
     return SuccessHandler(
       { profile },
@@ -49,7 +49,7 @@ export async function getProfile(req, res, next) {
   try {
     let profile = await UserProfile.findOne({ user: req.user.id })
       .populate("user", "username email")
-      .populate("groups", "name tagline groupIconLink bannerLink privacy");
+      .populate("groups", "name category tagline groupIconLink bannerLink privacy");
 
     // Auto-create default profile if not exists
     if (!profile) {
@@ -67,7 +67,7 @@ export async function getProfile(req, res, next) {
       // Populate the newly created profile
       profile = await UserProfile.findById(profile._id)
         .populate("user", "username email")
-        .populate("groups", "name tagline groupIconLink bannerLink privacy");
+        .populate("groups", "name category tagline groupIconLink bannerLink privacy");
     }
 
     return SuccessHandler(
@@ -94,7 +94,7 @@ export async function updateProfile(req, res, next) {
       { new: true, runValidators: true },
     )
       .populate("user", "username email")
-      .populate("groups", "name tagline groupIconLink bannerLink privacy");
+      .populate("groups", "name category tagline groupIconLink bannerLink privacy");
 
     if (!profile) {
       return ErrorHandler(

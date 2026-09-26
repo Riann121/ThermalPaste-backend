@@ -146,7 +146,7 @@ export async function getFeed(req, res, next) {
       .skip(skip)
       .limit(limit)
       .populate("user", "username")
-      .populate("group", "name groupIconLink privacy");
+      .populate("group", "name category groupIconLink privacy");
 
     const formatted = await batchFormatPosts(posts, currentUserId);
 
@@ -223,7 +223,7 @@ export async function createPost(req, res, next) {
 
     const populated = await Post.findById(newPost._id)
       .populate("user", "username")
-      .populate("group", "name groupIconLink privacy");
+      .populate("group", "name category groupIconLink privacy");
 
     const formatted = await formatPost(populated, req.user.id);
 
@@ -251,7 +251,7 @@ export async function getPostById(req, res, next) {
 
     const post = await Post.findById(id)
       .populate("user", "username")
-      .populate("group", "name groupIconLink privacy members creator");
+      .populate("group", "name category groupIconLink privacy members creator");
 
     if (!post) {
       return ErrorHandler(res, 404, "Post not found", undefined, "post-service");
@@ -338,7 +338,7 @@ export async function updatePost(req, res, next) {
 
     const populated = await Post.findById(post._id)
       .populate("user", "username")
-      .populate("group", "name groupIconLink privacy");
+      .populate("group", "name category groupIconLink privacy");
 
     const formatted = await formatPost(populated, req.user.id);
 
@@ -474,7 +474,7 @@ export async function getSavedPosts(req, res, next) {
         path: "post",
         populate: [
           { path: "user", select: "username" },
-          { path: "group", select: "name groupIconLink privacy" },
+          { path: "group", select: "name category groupIconLink privacy" },
         ],
       });
 
@@ -553,7 +553,7 @@ export async function getGroupPosts(req, res, next) {
       .skip(skip)
       .limit(limit)
       .populate("user", "username")
-      .populate("group", "name groupIconLink privacy");
+      .populate("group", "name category groupIconLink privacy");
 
     const formatted = await batchFormatPosts(posts, currentUserId);
 

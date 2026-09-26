@@ -140,7 +140,7 @@ export async function me(req, res, next) {
     // Get or create profile
     let profile = await UserProfile.findOne({ user: user._id }).populate(
       "groups",
-      "name tagline groupIconLink bannerLink privacy",
+      "name category tagline groupIconLink bannerLink privacy",
     );
 
     if (!profile) {
@@ -151,7 +151,7 @@ export async function me(req, res, next) {
       });
       profile = await UserProfile.findById(profile._id).populate(
         "groups",
-        "name tagline groupIconLink bannerLink privacy",
+        "name category tagline groupIconLink bannerLink privacy",
       );
     }
 
