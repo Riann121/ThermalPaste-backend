@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/Users.js";
+import UserProfile from "../models/UserProfile.js";
 import { SuccessHandler } from "../util/successHandler.js";
 import { ErrorHandler } from "../util/errorHandler.js";
 import {
@@ -39,6 +40,13 @@ export async function register(req, res, next) {
       username: username.trim(),
       email: email.trim().toLowerCase(),
       password: hashedPassword,
+    });
+
+    // Create default profile for new user
+    await UserProfile.create({
+      user: user._id,
+      imageLink: "",
+      bio: "",
     });
 
     // Clear any prior or stale session cookies
@@ -129,12 +137,35 @@ export async function me(req, res, next) {
       return ErrorHandler(res, 404, "User not found");
     }
 
+    // Get or create profile
+    let profile = await UserProfile.findOne({ user: user._id }).populate(
+      "groups",
+      "name tagline groupIconLink bannerLink privacy",
+    );
+
+    if (!profile) {
+      profile = await UserProfile.create({
+        user: user._id,
+        imageLink: "",
+        bio: "",
+      });
+      profile = await UserProfile.findById(profile._id).populate(
+        "groups",
+        "name tagline groupIconLink bannerLink privacy",
+      );
+    }
+
     return SuccessHandler(
       {
         user: {
           id: user._id,
           username: user.username,
           email: user.email,
+        },
+        profile: {
+          imageLink: profile.imageLink,
+          bio: profile.bio,
+          groups: profile.groups,
         },
       },
       res,

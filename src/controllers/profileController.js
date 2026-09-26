@@ -1,4 +1,5 @@
 import { UserProfile } from "../models/UserProfile.js";
+import { User } from "../models/Users.js";
 import { SuccessHandler } from "../util/successHandler.js";
 import { ErrorHandler } from "../util/errorHandler.js";
 
@@ -46,11 +47,27 @@ export async function createProfile(req, res, next) {
 
 export async function getProfile(req, res, next) {
   try {
-    const profile = await UserProfile.findOne({ user: req.user.id })
+    let profile = await UserProfile.findOne({ user: req.user.id })
       .populate("user", "username email")
       .populate("groups", "name tagline groupIconLink bannerLink privacy");
+
+    // Auto-create default profile if not exists
     if (!profile) {
-      return ErrorHandler(res, 404, "Profile not found");
+      const user = await User.findById(req.user.id).select("username email");
+      if (!user) {
+        return ErrorHandler(res, 404, "User not found");
+      }
+
+      profile = await UserProfile.create({
+        user: user._id,
+        imageLink: "",
+        bio: "",
+      });
+
+      // Populate the newly created profile
+      profile = await UserProfile.findById(profile._id)
+        .populate("user", "username email")
+        .populate("groups", "name tagline groupIconLink bannerLink privacy");
     }
 
     return SuccessHandler(
