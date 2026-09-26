@@ -9,8 +9,14 @@ import {
 
 const router = express.Router();
 
+// POST /api/comments/:commentId/react - React to a comment (upvote/downvote) - matches post route
+router.post("/:commentId/react", checkToken, voteComment);
+
 // POST /api/comments/:commentId/vote - Toggle upvote/downvote (auth required)
 router.post("/:commentId/vote", checkToken, voteComment);
+
+// GET /api/comments/:commentId/react - Get reaction counts (optional auth) - matches post route
+router.get("/:commentId/react", optionalToken, getCommentVotes);
 
 // GET /api/comments/:commentId/votes - Get vote counts (optional auth)
 router.get("/:commentId/votes", optionalToken, getCommentVotes);

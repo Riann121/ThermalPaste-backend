@@ -194,3 +194,48 @@ export async function deleteComment(req, res, next) {
     next(error);
   }
 }
+
+// GET /api/comments/user/:userId
+// Returns all comments by a specific user (flat list, newest first)
+export async function getUserComments(req, res, next) {
+  try {
+    const { userId } = req.params;
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || 10));
+    const skip = (page - 1) * limit;
+
+    const totalComments = await Comment.countDocuments({ user: userId });
+
+    const flat = await Comment.find({ user: userId })
+      .populate("user", "username")
+      .populate("post", "heading group")
+      .populate("votedBy.user", "username")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    // Add userVote for current user
+    const flatWithUserVote = flat.map((c) => {
+      const doc = c.toObject ? c.toObject() : { ...c };
+      let userVote = 0;
+      if (req.user?.id && doc.votedBy) {
+        const vote = doc.votedBy.find((v) => {
+          const voterId = v.user?._id?.toString?.() || v.user?.toString?.();
+          return voterId === req.user.id;
+        });
+        if (vote) userVote = vote.value;
+      }
+      doc.userVote = userVote;
+      return doc;
+    });
+
+    return SuccessHandler(
+      { comments: flatWithUserVote, count: flat.length, totalComments, totalPages: Math.ceil(totalComments / limit) || 1, currentPage: page },
+      res,
+      200,
+      "User comments fetched successfully",
+    );
+  } catch (error) {
+    next(error);
+  }
+}

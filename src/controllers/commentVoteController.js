@@ -1,5 +1,6 @@
 import { Vote } from "../models/Vote.js";
 import { Comment } from "../models/Comment.js";
+import { UserProfile } from "../models/UserProfile.js";
 import { SuccessHandler } from "../util/successHandler.js";
 import { ErrorHandler } from "../util/errorHandler.js";
 
@@ -79,6 +80,33 @@ export async function voteComment(req, res, next) {
         targetId: commentId,
         value: newVoteValue,
       });
+    }
+
+    // Sync with UserProfile likedComments (like posts do with likedPosts)
+    if (newVoteValue === 1) {
+      // Upvoted - add to likedComments
+      await UserProfile.findOneAndUpdate(
+        { user: userId },
+        { $addToSet: { likedComments: commentId } },
+      );
+    } else if (newVoteValue === 0 && value === 1) {
+      // Removed upvote - remove from likedComments
+      await UserProfile.findOneAndUpdate(
+        { user: userId },
+        { $pull: { likedComments: commentId } },
+      );
+    } else if (newVoteValue === -1 && value === -1) {
+      // Changed from upvote to downvote - remove from likedComments
+      await UserProfile.findOneAndUpdate(
+        { user: userId },
+        { $pull: { likedComments: commentId } },
+      );
+    } else if (newVoteValue === 1 && value === 1 && existingVoteIndex !== -1) {
+      // Changed from downvote to upvote - add to likedComments
+      await UserProfile.findOneAndUpdate(
+        { user: userId },
+        { $addToSet: { likedComments: commentId } },
+      );
     }
 
     return SuccessHandler(
