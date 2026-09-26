@@ -8,6 +8,7 @@ import {
   Post,
   Comment,
   SavedPost,
+  Vote,
 } from "../models/index.js";
 
 const USERS_DATA = [
@@ -167,6 +168,7 @@ async function seed() {
           "After 180 days of continuous 24/7 rendering load on an Intel i9-14900KS, here are the pump-out degradation metrics and thermal paste pump-out comparisons. Kryonaut showed slight dry-out at 95°C peaks, whereas MX-6 maintained uniform viscosity across the IHS die contact perimeter.",
         imageLink:
           "https://images.unsplash.com/photo-1591799264318-7e6ef8ddb7ea?w=800&auto=format&fit=crop&q=80",
+        reactCount: { upvote: 142, downvote: 6 },
       },
       {
         userIndex: 1,
@@ -176,6 +178,7 @@ async function seed() {
           "Custom unsleeved silver silicon cables, 240mm AIO with slim Phanteks T30 fans exhausting out the top. Maximum CPU temp sits at 74°C during Cyberpunk 2077 4K Overdrive. Total volume under 10 Liters!",
         imageLink:
           "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=800&auto=format&fit=crop&q=80",
+        reactCount: { upvote: 285, downvote: 11 },
       },
       {
         userIndex: 2,
@@ -185,6 +188,7 @@ async function seed() {
           "Due to the elongated rectangular aspect ratio of LGA1700 and the hot-spot concentration near the IOD/CCD offset on AM5, a simple center pea leaves the corners dry under mounting torque. A spread method or multi-dot X-pattern consistently gives a 2-4°C reduction in core delta.",
         imageLink:
           "https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&auto=format&fit=crop&q=80",
+        reactCount: { upvote: 98, downvote: 4 },
       },
       {
         userIndex: 3,
@@ -194,6 +198,7 @@ async function seed() {
           "Finally passed 20,000% Karhu RAM Test and 2 hours of y-cruncher VST. Voltages: VDD/VDDQ at 1.52V, SA at 1.25V, TX VDDQ at 1.35V. Active 60mm Noctua fan positioned directly over the DIMMs is strictly mandatory to prevent thermal errors past 48°C.",
         imageLink:
           "https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=800&auto=format&fit=crop&q=80",
+        reactCount: { upvote: 73, downvote: 2 },
       },
       {
         userIndex: 1,
@@ -203,6 +208,7 @@ async function seed() {
           "EK Quantum Velocity2 CPU block, Heatkiller V Pro GPU block, Watercool MO-RA3 standalone readiness with quick-disconnects on the PCI pass-through bracket. Coolant delta stays under 4°C above ambient with fans at 800 RPM in total silence.",
         imageLink:
           "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=800&auto=format&fit=crop&q=80",
+        reactCount: { upvote: 194, downvote: 7 },
       },
       {
         userIndex: 0,
@@ -212,6 +218,7 @@ async function seed() {
           "Velcro anchor points, custom channel routings behind the motherboard tray, comb spacing rules, and routing EPS 8-pin cables through the top chassis cutout prior to fastening the motherboard.",
         imageLink:
           "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=800&auto=format&fit=crop&q=80",
+        reactCount: { upvote: 56, downvote: 1 },
       },
     ];
 
@@ -229,12 +236,16 @@ async function seed() {
           heading: p.heading,
           description: p.description,
           imageLink: p.imageLink,
+          reactCount: p.reactCount,
         });
+      } else {
+        existingPost.reactCount = p.reactCount;
+        await existingPost.save();
       }
       createdPosts.push(existingPost);
     }
 
-    console.log(`Created/Verified ${createdPosts.length} posts.`);
+    console.log(`Created/Verified ${createdPosts.length} posts with reaction counts.`);
 
     // ── 4. Seed Threaded Comments ────────────────────────────────────────────
     console.log("Seeding comments & replies...");
@@ -303,6 +314,35 @@ async function seed() {
           { user: u._id, post: createdPosts[i]._id },
           { upsert: true },
         );
+      }
+    }
+
+    // ── 6. Seed Post Reactions (Votes) ───────────────────────────────────────
+    console.log("Seeding user reactions / votes on posts...");
+    if (createdPosts.length >= 4) {
+      const sampleVotes = [
+        { user: userDocs[0]._id, post: createdPosts[1]._id, value: 1 },
+        { user: userDocs[0]._id, post: createdPosts[2]._id, value: 1 },
+        { user: userDocs[1]._id, post: createdPosts[0]._id, value: 1 },
+        { user: userDocs[1]._id, post: createdPosts[3]._id, value: -1 },
+        { user: userDocs[2]._id, post: createdPosts[0]._id, value: 1 },
+        { user: userDocs[2]._id, post: createdPosts[1]._id, value: 1 },
+        { user: userDocs[3]._id, post: createdPosts[0]._id, value: 1 },
+      ];
+
+      for (const sv of sampleVotes) {
+        await Vote.findOneAndUpdate(
+          { user: sv.user, targetType: "Post", targetId: sv.post },
+          { user: sv.user, targetType: "Post", targetId: sv.post, value: sv.value },
+          { upsert: true, setDefaultsOnInsert: true },
+        );
+
+        if (sv.value === 1) {
+          await UserProfile.findOneAndUpdate(
+            { user: sv.user },
+            { $addToSet: { likedPosts: sv.post } },
+          );
+        }
       }
     }
 

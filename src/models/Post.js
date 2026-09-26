@@ -26,9 +26,35 @@ const postSchema = new mongoose.Schema(
       trim: true,
       default: "",
     },
+    reactCount: {
+      upvote: {
+        type: Number,
+        default: 0,
+        min: 0,
+      },
+      downvote: {
+        type: Number,
+        default: 0,
+        min: 0,
+      },
+    },
   },
-  { timestamps: true },
+  {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
+  },
 );
+
+postSchema
+  .virtual("reactcount")
+  .get(function () {
+    return this.reactCount;
+  })
+  .set(function (val) {
+    this.reactCount = val;
+  });
 
 export const Post = mongoose.model("Post", postSchema);
 export default Post;
+

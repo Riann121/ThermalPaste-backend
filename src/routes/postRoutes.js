@@ -9,6 +9,8 @@ import {
   deletePost,
   toggleSavePost,
   getSavedPosts,
+  reactPost,
+  getPostReaction,
 } from "../controllers/postController.js";
 import { getComments } from "../controllers/commentController.js";
 
@@ -26,6 +28,14 @@ router.post("/", checkToken, createPost);
 // POST /api/posts/:id/save — Toggle save/bookmark on a post
 router.post("/:id/save", checkToken, toggleSavePost);
 
+// POST /api/posts/:id/react — React to a post (upvote / downvote)
+router.post("/:id/react", checkToken, reactPost);
+router.post("/:id/vote", checkToken, reactPost);
+
+// GET /api/posts/:id/react — Get reactions & user's reaction for a post
+router.get("/:id/react", optionalToken, getPostReaction);
+router.get("/:id/vote", optionalToken, getPostReaction);
+
 // GET /api/posts/:postId/comments — Comments for post (convenience alias)
 router.get("/:postId/comments", checkToken, getComments);
 
@@ -39,3 +49,4 @@ router.put("/:id", checkToken, updatePost);
 router.delete("/:id", checkToken, deletePost);
 
 export default router;
+

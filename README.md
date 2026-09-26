@@ -106,6 +106,8 @@ Base URL: `http://localhost:4000`
 | `PUT` | `/api/posts/:id` | `checkToken` | Edit post heading, description, or image (owner only). |
 | `DELETE`| `/api/posts/:id` | `checkToken` | Delete post and cascade delete related comments, bookmarks, and votes (owner only). |
 | `POST` | `/api/posts/:id/save` | `checkToken` | Toggle bookmark / saved status for the post. |
+| `POST` | `/api/posts/:id/react`| `checkToken` | React to a post (`upvote` or `downvote`, toggleable, alias: `/vote`). Updates `reactCount`. |
+| `GET`  | `/api/posts/:id/react`| `optionalToken` | Get reaction counts and current user's reaction status. |
 | `GET` | `/api/posts/saved` | `checkToken` | Get user's saved posts feed with pagination (convenience alias for `/api/saved`). |
 | `GET` | `/api/posts/:postId/comments` | `checkToken` | Fetch comments discussion tree for a post (convenience alias). |
 

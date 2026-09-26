@@ -19,7 +19,7 @@ function sanitizeGroupName(rawName) {
     .replace(/[^a-z0-9-_]/g, "");
 }
 
-// Helper: Format post document with author avatar, comment count, and saved status
+// Helper: Format post document with author avatar, comment count, saved status, and reaction counts
 export async function formatPost(postDoc, currentUserId = null) {
   const doc = postDoc.toObject ? postDoc.toObject() : { ...postDoc };
 
@@ -32,15 +32,28 @@ export async function formatPost(postDoc, currentUserId = null) {
   const commentsCount = await Comment.countDocuments({ post: doc._id });
 
   let isSaved = false;
+  let userReaction = null;
+
   if (currentUserId) {
     const saved = await SavedPost.findOne({ user: currentUserId, post: doc._id });
     isSaved = !!saved;
+
+    const userVote = await Vote.findOne({
+      user: currentUserId,
+      targetType: "Post",
+      targetId: doc._id,
+    });
+    if (userVote) {
+      userReaction = userVote.value === 1 ? "upvote" : "downvote";
+    }
   }
 
   const isOwner =
     currentUserId && doc.user?._id
       ? doc.user._id.toString() === currentUserId
       : false;
+
+  const reactCount = doc.reactCount || { upvote: 0, downvote: 0 };
 
   return {
     _id: doc._id,
@@ -56,6 +69,9 @@ export async function formatPost(postDoc, currentUserId = null) {
     commentsCount,
     isSaved,
     isOwner,
+    reactCount,
+    reactcount: reactCount,
+    userReaction,
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
   };
@@ -80,18 +96,30 @@ export async function batchFormatPosts(posts, currentUserId = null) {
   commentCounts.forEach((c) => commentCountMap.set(c._id.toString(), c.count));
 
   let savedPostSet = new Set();
+  let userVoteMap = new Map();
+
   if (currentUserId) {
     const saved = await SavedPost.find({
       user: currentUserId,
       post: { $in: postIds },
     }).select("post");
     savedPostSet = new Set(saved.map((s) => s.post.toString()));
+
+    const userVotes = await Vote.find({
+      user: currentUserId,
+      targetType: "Post",
+      targetId: { $in: postIds },
+    });
+    userVotes.forEach((v) => {
+      userVoteMap.set(v.targetId.toString(), v.value === 1 ? "upvote" : "downvote");
+    });
   }
 
   return posts.map((post) => {
     const doc = post.toObject ? post.toObject() : { ...post };
     const authorId = doc.user?._id?.toString() || doc.user?.toString();
     const postIdStr = doc._id.toString();
+    const reactCount = doc.reactCount || { upvote: 0, downvote: 0 };
 
     return {
       _id: doc._id,
@@ -107,6 +135,9 @@ export async function batchFormatPosts(posts, currentUserId = null) {
       commentsCount: commentCountMap.get(postIdStr) || 0,
       isSaved: savedPostSet.has(postIdStr),
       isOwner: currentUserId && authorId ? authorId === currentUserId : false,
+      reactCount,
+      reactcount: reactCount,
+      userReaction: userVoteMap.get(postIdStr) || null,
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt,
     };
@@ -579,3 +610,191 @@ export async function getGroupPosts(req, res, next) {
     next(error);
   }
 }
+
+// POST /api/posts/:id/react (or POST /api/posts/:id/vote)
+// Toggle, add, or switch user reaction (upvote / downvote) on a post
+export async function reactPost(req, res, next) {
+  try {
+    const { id } = req.params;
+    const rawType =
+      req.body.reaction ??
+      req.body.type ??
+      req.body.action ??
+      (req.body.value === 1 || req.body.vote === 1
+        ? "upvote"
+        : req.body.value === -1 || req.body.vote === -1
+        ? "downvote"
+        : req.body.value ?? req.body.vote);
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return ErrorHandler(res, 400, "Invalid post ID", undefined, "post-service");
+    }
+
+    if (!rawType || typeof rawType !== "string") {
+      return ErrorHandler(
+        res,
+        400,
+        "Reaction type is required. Expected: 'upvote' or 'downvote'",
+        undefined,
+        "post-service",
+      );
+    }
+
+    const reaction = rawType.trim().toLowerCase();
+    if (reaction !== "upvote" && reaction !== "downvote") {
+      return ErrorHandler(
+        res,
+        400,
+        "Invalid reaction type. Supported reactions: 'upvote', 'downvote'",
+        undefined,
+        "post-service",
+      );
+    }
+
+    const post = await Post.findById(id);
+    if (!post) {
+      return ErrorHandler(res, 404, "Post not found", undefined, "post-service");
+    }
+
+    if (!post.reactCount) {
+      post.reactCount = { upvote: 0, downvote: 0 };
+    }
+
+    const userId = req.user.id;
+    const targetValue = reaction === "upvote" ? 1 : -1;
+
+    const existingVote = await Vote.findOne({
+      user: userId,
+      targetType: "Post",
+      targetId: id,
+    });
+
+    let userReaction = null;
+    let actionMessage = "";
+
+    if (!existingVote) {
+      // 1. New reaction
+      await Vote.create({
+        user: userId,
+        targetType: "Post",
+        targetId: id,
+        value: targetValue,
+      });
+
+      if (targetValue === 1) {
+        post.reactCount.upvote = (post.reactCount.upvote || 0) + 1;
+        await UserProfile.findOneAndUpdate(
+          { user: userId },
+          { $addToSet: { likedPosts: post._id } },
+        );
+        actionMessage = "Post upvoted successfully";
+      } else {
+        post.reactCount.downvote = (post.reactCount.downvote || 0) + 1;
+        actionMessage = "Post downvoted successfully";
+      }
+      userReaction = reaction;
+    } else if (existingVote.value === targetValue) {
+      // 2. Toggle off existing reaction
+      await Vote.findByIdAndDelete(existingVote._id);
+
+      if (targetValue === 1) {
+        post.reactCount.upvote = Math.max(0, (post.reactCount.upvote || 0) - 1);
+        await UserProfile.findOneAndUpdate(
+          { user: userId },
+          { $pull: { likedPosts: post._id } },
+        );
+      } else {
+        post.reactCount.downvote = Math.max(0, (post.reactCount.downvote || 0) - 1);
+      }
+      userReaction = null;
+      actionMessage = "Reaction removed successfully";
+    } else {
+      // 3. Switch reaction
+      existingVote.value = targetValue;
+      await existingVote.save();
+
+      if (targetValue === 1) {
+        // Switched from downvote to upvote
+        post.reactCount.downvote = Math.max(0, (post.reactCount.downvote || 0) - 1);
+        post.reactCount.upvote = (post.reactCount.upvote || 0) + 1;
+        await UserProfile.findOneAndUpdate(
+          { user: userId },
+          { $addToSet: { likedPosts: post._id } },
+        );
+        actionMessage = "Reaction changed to upvote";
+      } else {
+        // Switched from upvote to downvote
+        post.reactCount.upvote = Math.max(0, (post.reactCount.upvote || 0) - 1);
+        post.reactCount.downvote = (post.reactCount.downvote || 0) + 1;
+        await UserProfile.findOneAndUpdate(
+          { user: userId },
+          { $pull: { likedPosts: post._id } },
+        );
+        actionMessage = "Reaction changed to downvote";
+      }
+      userReaction = reaction;
+    }
+
+    await post.save();
+
+    return SuccessHandler(
+      {
+        postId: post._id,
+        userReaction,
+        reactCount: post.reactCount,
+        reactcount: post.reactCount,
+      },
+      res,
+      200,
+      actionMessage,
+      "post-service",
+    );
+  } catch (error) {
+    next(error);
+  }
+}
+
+// GET /api/posts/:id/react (or GET /api/posts/:id/vote)
+// Get post reaction counts and current user's reaction
+export async function getPostReaction(req, res, next) {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return ErrorHandler(res, 400, "Invalid post ID", undefined, "post-service");
+    }
+
+    const post = await Post.findById(id);
+    if (!post) {
+      return ErrorHandler(res, 404, "Post not found", undefined, "post-service");
+    }
+
+    let userReaction = null;
+    if (req.user?.id) {
+      const userVote = await Vote.findOne({
+        user: req.user.id,
+        targetType: "Post",
+        targetId: id,
+      });
+      if (userVote) {
+        userReaction = userVote.value === 1 ? "upvote" : "downvote";
+      }
+    }
+
+    const reactCount = post.reactCount || { upvote: 0, downvote: 0 };
+    return SuccessHandler(
+      {
+        postId: post._id,
+        reactCount,
+        reactcount: reactCount,
+        userReaction,
+      },
+      res,
+      200,
+      "Reaction status fetched successfully",
+      "post-service",
+    );
+  } catch (error) {
+    next(error);
+  }
+}
+
