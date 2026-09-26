@@ -503,3 +503,79 @@ export async function getSavedPosts(req, res, next) {
     next(error);
   }
 }
+
+// GET /api/groups/:idOrName/posts
+// Get paginated feed of posts for a specific group (checks group privacy)
+export async function getGroupPosts(req, res, next) {
+  try {
+    const { idOrName } = req.params;
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || 10));
+    const skip = (page - 1) * limit;
+
+    const cleanIdentifier = sanitizeGroupName(idOrName);
+    const isObjectId = mongoose.Types.ObjectId.isValid(idOrName);
+
+    const group = await Group.findOne(
+      isObjectId
+        ? { $or: [{ _id: idOrName }, { name: cleanIdentifier }] }
+        : { name: cleanIdentifier },
+    );
+
+    if (!group) {
+      return ErrorHandler(res, 404, "Group not found", undefined, "post-service");
+    }
+
+    const currentUserId = req.user?.id;
+    if (group.privacy === "private") {
+      const isMember = currentUserId
+        ? group.members.some((m) => m.toString() === currentUserId)
+        : false;
+      const isCreator = currentUserId
+        ? group.creator.toString() === currentUserId
+        : false;
+
+      if (!isMember && !isCreator) {
+        return ErrorHandler(
+          res,
+          403,
+          "This group is private. You must be an accepted member to view its posts.",
+          undefined,
+          "post-service",
+        );
+      }
+    }
+
+    const totalPosts = await Post.countDocuments({ group: group._id });
+
+    const posts = await Post.find({ group: group._id })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .populate("user", "username")
+      .populate("group", "name groupIconLink privacy");
+
+    const formatted = await batchFormatPosts(posts, currentUserId);
+
+    return SuccessHandler(
+      {
+        posts: formatted,
+        count: formatted.length,
+        totalPosts,
+        totalPages: Math.ceil(totalPosts / limit) || 1,
+        currentPage: page,
+        group: {
+          _id: group._id,
+          name: group.name,
+          privacy: group.privacy,
+        },
+      },
+      res,
+      200,
+      "Group posts fetched successfully",
+      "post-service",
+    );
+  } catch (error) {
+    next(error);
+  }
+}

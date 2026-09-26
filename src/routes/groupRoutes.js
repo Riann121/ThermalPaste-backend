@@ -11,6 +11,7 @@ import {
   getJoinRequests,
   handleJoinRequest,
 } from "../controllers/groupController.js";
+import { getGroupPosts } from "../controllers/postController.js";
 
 const router = express.Router();
 
@@ -19,6 +20,9 @@ router.get("/", optionalToken, getGroups);
 
 // Create a group
 router.post("/", checkToken, createGroup);
+
+// Get paginated posts for a group
+router.get("/:idOrName/posts", optionalToken, getGroupPosts);
 
 // Get single group details by _id or name slug
 router.get("/:idOrName", optionalToken, getGroupByIdOrName);
