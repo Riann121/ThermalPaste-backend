@@ -22,15 +22,32 @@ const commentSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
-    likes: {
-      type: [
-        {
+    score: {
+      type: Number,
+      default: 0,
+    },
+    upvotes: {
+      type: Number,
+      default: 0,
+    },
+    downvotes: {
+      type: Number,
+      default: 0,
+    },
+    votedBy: [
+      {
+        user: {
           type: mongoose.Schema.Types.ObjectId,
           ref: "User",
+          required: true,
         },
-      ],
-      default: [],
-    },
+        value: {
+          type: Number,
+          enum: [1, -1],
+          required: true,
+        },
+      },
+    ],
   },
   { timestamps: true },
 );
