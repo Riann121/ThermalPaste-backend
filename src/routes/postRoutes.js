@@ -10,6 +10,7 @@ import {
   toggleSavePost,
   getSavedPosts,
 } from "../controllers/postController.js";
+import { getComments } from "../controllers/commentController.js";
 
 const router = express.Router();
 
@@ -24,6 +25,9 @@ router.post("/", checkToken, createPost);
 
 // POST /api/posts/:id/save — Toggle save/bookmark on a post
 router.post("/:id/save", checkToken, toggleSavePost);
+
+// GET /api/posts/:postId/comments — Comments for post (convenience alias)
+router.get("/:postId/comments", checkToken, getComments);
 
 // GET /api/posts/:id — Get a post by ID
 router.get("/:id", optionalToken, getPostById);

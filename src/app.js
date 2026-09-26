@@ -44,7 +44,6 @@ export default function createApp() {
   app.use("/api/groups", groupRoutes);
   app.use("/api/posts", postRoutes);
   app.use("/api/saved", savedRoutes);
-  app.use(authRoutes);
 
   app.use((req, res) => ErrorHandler(res, 404, "Not found"));
   app.use((err, req, res, next) =>
