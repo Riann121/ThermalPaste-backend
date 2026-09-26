@@ -5,7 +5,6 @@ import {
   getComments,
   updateComment,
   deleteComment,
-  likeComment,
 } from "../controllers/commentController.js";
 
 const router = express.Router();
@@ -21,8 +20,5 @@ router.put("/:commentId", checkToken, updateComment);
 
 // DELETE /api/comments/:commentId — delete a comment (and its replies)
 router.delete("/:commentId", checkToken, deleteComment);
-
-// POST /api/comments/:commentId/like — toggle like on a comment
-router.post("/:commentId/like", checkToken, likeComment);
 
 export default router;

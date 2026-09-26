@@ -8,6 +8,7 @@ import authRoutes from "./routes/authRouter.js";
 import healthRoutes from "./routes/healthRoutes.js";
 import profileRoutes from "./routes/profileRoutes.js";
 import commentRoutes from "./routes/commentRoutes.js";
+import commentVoteRoutes from "./routes/commentVoteRoutes.js";
 import groupRoutes from "./routes/groupRoutes.js";
 import postRoutes from "./routes/postRoutes.js";
 import savedRoutes from "./routes/savedRoutes.js";
@@ -40,8 +41,9 @@ export default function createApp() {
   app.use(healthRoutes);
   app.use("/api/auth", authRoutes);
   app.use("/api/profile", profileRoutes);
-  app.use("/api/comments", commentRoutes);
-  app.use("/api/groups", groupRoutes);
+app.use("/api/comments", commentRoutes);
+app.use("/api/comments", commentVoteRoutes);
+app.use("/api/groups", groupRoutes);
   app.use("/api/posts", postRoutes);
   app.use("/api/saved", savedRoutes);
 
