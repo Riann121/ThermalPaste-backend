@@ -4,6 +4,7 @@ import "dotenv/config";
 import express from "express";
 import mongoose from "mongoose";
 import logger from "./middleware/logger.js";
+import carbonTracker from "./middleware/carbonTracker.js";
 import authRoutes from "./routes/authRouter.js";
 import healthRoutes from "./routes/healthRoutes.js";
 import profileRoutes from "./routes/profileRoutes.js";
@@ -38,6 +39,7 @@ export default function createApp() {
   app.use(express.json());
   app.use(cookieParser());
   app.use(logger);
+  app.use(carbonTracker);
   app.use(healthRoutes);
   app.use("/api/auth", authRoutes);
   app.use("/api/profile", profileRoutes);
