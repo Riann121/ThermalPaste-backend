@@ -61,6 +61,113 @@ export async function formatPost(postDoc, currentUserId = null) {
   };
 }
 
+// Helper: Batch-format multiple posts
+export async function batchFormatPosts(posts, currentUserId = null) {
+  if (!posts || posts.length === 0) return [];
+
+  const postIds = posts.map((p) => p._id);
+  const userIds = [...new Set(posts.map((p) => p.user?._id).filter(Boolean))];
+
+  const profiles = await UserProfile.find({ user: { $in: userIds } }).select("user imageLink");
+  const avatarMap = new Map();
+  profiles.forEach((p) => avatarMap.set(p.user.toString(), p.imageLink || ""));
+
+  const commentCounts = await Comment.aggregate([
+    { $match: { post: { $in: postIds } } },
+    { $group: { _id: "$post", count: { $sum: 1 } } },
+  ]);
+  const commentCountMap = new Map();
+  commentCounts.forEach((c) => commentCountMap.set(c._id.toString(), c.count));
+
+  let savedPostSet = new Set();
+  if (currentUserId) {
+    const saved = await SavedPost.find({
+      user: currentUserId,
+      post: { $in: postIds },
+    }).select("post");
+    savedPostSet = new Set(saved.map((s) => s.post.toString()));
+  }
+
+  return posts.map((post) => {
+    const doc = post.toObject ? post.toObject() : { ...post };
+    const authorId = doc.user?._id?.toString() || doc.user?.toString();
+    const postIdStr = doc._id.toString();
+
+    return {
+      _id: doc._id,
+      heading: doc.heading,
+      description: doc.description,
+      imageLink: doc.imageLink,
+      user: {
+        _id: doc.user?._id || doc.user,
+        username: doc.user?.username || "",
+        imageLink: authorId ? avatarMap.get(authorId) || "" : "",
+      },
+      group: doc.group,
+      commentsCount: commentCountMap.get(postIdStr) || 0,
+      isSaved: savedPostSet.has(postIdStr),
+      isOwner: currentUserId && authorId ? authorId === currentUserId : false,
+      createdAt: doc.createdAt,
+      updatedAt: doc.updatedAt,
+    };
+  });
+}
+
+// GET /api/posts
+// List posts across groups (respects privacy, supports pagination)
+export async function getFeed(req, res, next) {
+  try {
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || 10));
+    const skip = (page - 1) * limit;
+
+    const currentUserId = req.user?.id;
+
+    // Filter groups visible to requester
+    const groupFilter = currentUserId
+      ? {
+          $or: [
+            { privacy: "public" },
+            { members: currentUserId },
+            { creator: currentUserId },
+          ],
+        }
+      : { privacy: "public" };
+
+    const visibleGroups = await Group.find(groupFilter).select("_id");
+    const visibleGroupIds = visibleGroups.map((g) => g._id);
+
+    const totalPosts = await Post.countDocuments({
+      group: { $in: visibleGroupIds },
+    });
+
+    const posts = await Post.find({ group: { $in: visibleGroupIds } })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .populate("user", "username")
+      .populate("group", "name groupIconLink privacy");
+
+    const formatted = await batchFormatPosts(posts, currentUserId);
+
+    return SuccessHandler(
+      {
+        posts: formatted,
+        count: formatted.length,
+        totalPosts,
+        totalPages: Math.ceil(totalPosts / limit) || 1,
+        currentPage: page,
+      },
+      res,
+      200,
+      "Feed posts fetched successfully",
+      "post-service",
+    );
+  } catch (error) {
+    next(error);
+  }
+}
+
 // POST /api/posts
 // Create a new post in a public group or a private group where user is a member/creator
 export async function createPost(req, res, next) {

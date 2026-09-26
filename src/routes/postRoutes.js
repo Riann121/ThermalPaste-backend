@@ -3,12 +3,16 @@ import checkToken from "../middleware/checkToken.js";
 import optionalToken from "../middleware/optionalToken.js";
 import {
   createPost,
+  getFeed,
   getPostById,
   updatePost,
   deletePost,
 } from "../controllers/postController.js";
 
 const router = express.Router();
+
+// GET /api/posts — Feed of posts across groups (respects privacy, paginated)
+router.get("/", optionalToken, getFeed);
 
 // POST /api/posts — Create a new post
 router.post("/", checkToken, createPost);
