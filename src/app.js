@@ -41,9 +41,9 @@ export default function createApp() {
   app.use(healthRoutes);
   app.use("/api/auth", authRoutes);
   app.use("/api/profile", profileRoutes);
-app.use("/api/comments", commentRoutes);
-app.use("/api/comments", commentVoteRoutes);
-app.use("/api/groups", groupRoutes);
+  app.use("/api/comments", commentRoutes);
+  app.use("/api/comments", commentVoteRoutes);
+  app.use("/api/groups", groupRoutes);
   app.use("/api/posts", postRoutes);
   app.use("/api/saved", savedRoutes);
 
