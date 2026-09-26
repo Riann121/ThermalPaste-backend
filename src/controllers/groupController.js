@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import { Group } from "../models/Group.js";
+import { UserProfile } from "../models/UserProfile.js";
 import { SuccessHandler } from "../util/successHandler.js";
 import { ErrorHandler } from "../util/errorHandler.js";
 
@@ -61,6 +62,13 @@ export async function createGroup(req, res, next) {
       members: [req.user.id],
       joinRequests: [],
     });
+
+    // Sync group to creator's UserProfile
+    await UserProfile.findOneAndUpdate(
+      { user: req.user.id },
+      { $addToSet: { groups: newGroup._id } },
+      { upsert: true, new: true, setDefaultsOnInsert: true },
+    );
 
     const populated = await newGroup.populate("creator", "username email");
 
@@ -298,6 +306,13 @@ export async function joinGroup(req, res, next) {
       );
       await group.save();
 
+      // Sync to user's UserProfile
+      await UserProfile.findOneAndUpdate(
+        { user: userId },
+        { $addToSet: { groups: group._id } },
+        { upsert: true, new: true, setDefaultsOnInsert: true },
+      );
+
       return SuccessHandler(
         { status: "active", membersCount: group.members.length },
         res,
@@ -357,6 +372,12 @@ export async function leaveGroup(req, res, next) {
 
     group.members = group.members.filter((m) => m.toString() !== userId);
     await group.save();
+
+    // Pull from user's UserProfile
+    await UserProfile.findOneAndUpdate(
+      { user: userId },
+      { $pull: { groups: group._id } },
+    );
 
     return SuccessHandler(
       { membersCount: group.members.length },
@@ -447,6 +468,13 @@ export async function handleJoinRequest(req, res, next) {
         group.members.push(userId);
       }
       await group.save();
+
+      // Sync to accepted user's UserProfile
+      await UserProfile.findOneAndUpdate(
+        { user: userId },
+        { $addToSet: { groups: group._id } },
+        { upsert: true, new: true, setDefaultsOnInsert: true },
+      );
 
       return SuccessHandler(
         { userId, action: "accepted", membersCount: group.members.length },

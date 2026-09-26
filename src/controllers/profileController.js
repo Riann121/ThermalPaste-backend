@@ -28,7 +28,10 @@ export async function createProfile(req, res, next) {
       if (req.body[field] !== undefined) data[field] = req.body[field];
     }
 
-    const profile = await UserProfile.create({ ...data, user: req.user.id });
+    const created = await UserProfile.create({ ...data, user: req.user.id });
+    const profile = await UserProfile.findById(created._id)
+      .populate("user", "username email")
+      .populate("groups", "name tagline groupIconLink bannerLink privacy");
 
     return SuccessHandler(
       { profile },
@@ -43,10 +46,9 @@ export async function createProfile(req, res, next) {
 
 export async function getProfile(req, res, next) {
   try {
-    const profile = await UserProfile.findOne({ user: req.user.id }).populate(
-      "user",
-      "username email",
-    );
+    const profile = await UserProfile.findOne({ user: req.user.id })
+      .populate("user", "username email")
+      .populate("groups", "name tagline groupIconLink bannerLink privacy");
     if (!profile) {
       return ErrorHandler(res, 404, "Profile not found");
     }
@@ -73,7 +75,9 @@ export async function updateProfile(req, res, next) {
       { user: req.user.id },
       { $set: updates },
       { new: true, runValidators: true },
-    ).populate("user", "username email");
+    )
+      .populate("user", "username email")
+      .populate("groups", "name tagline groupIconLink bannerLink privacy");
 
     if (!profile) {
       return ErrorHandler(
