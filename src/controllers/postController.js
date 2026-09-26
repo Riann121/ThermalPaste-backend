@@ -398,3 +398,108 @@ export async function deletePost(req, res, next) {
     next(error);
   }
 }
+
+// POST /api/posts/:id/save
+// Toggle bookmark / saved status of a post
+export async function toggleSavePost(req, res, next) {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return ErrorHandler(res, 400, "Invalid post ID", undefined, "post-service");
+    }
+
+    const post = await Post.findById(id);
+    if (!post) {
+      return ErrorHandler(res, 404, "Post not found", undefined, "post-service");
+    }
+
+    const existingSave = await SavedPost.findOne({
+      user: req.user.id,
+      post: id,
+    });
+
+    if (existingSave) {
+      await SavedPost.findByIdAndDelete(existingSave._id);
+      return SuccessHandler(
+        { postId: id, saved: false },
+        res,
+        200,
+        "Post removed from saved posts",
+        "post-service",
+      );
+    } else {
+      try {
+        await SavedPost.create({ user: req.user.id, post: id });
+        return SuccessHandler(
+          { postId: id, saved: true },
+          res,
+          200,
+          "Post saved successfully",
+          "post-service",
+        );
+      } catch (err) {
+        if (err.code === 11000) {
+          return SuccessHandler(
+            { postId: id, saved: true },
+            res,
+            200,
+            "Post saved successfully",
+            "post-service",
+          );
+        }
+        throw err;
+      }
+    }
+  } catch (error) {
+    next(error);
+  }
+}
+
+// GET /api/saved (and GET /api/posts/saved)
+// Get paginated list of posts saved by the authenticated user
+export async function getSavedPosts(req, res, next) {
+  try {
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || 10));
+    const skip = (page - 1) * limit;
+
+    const totalPosts = await SavedPost.countDocuments({ user: req.user.id });
+
+    const savedEntries = await SavedPost.find({ user: req.user.id })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .populate({
+        path: "post",
+        populate: [
+          { path: "user", select: "username" },
+          { path: "group", select: "name groupIconLink privacy" },
+        ],
+      });
+
+    const validPosts = savedEntries.map((s) => s.post).filter(Boolean);
+    const formatted = await batchFormatPosts(validPosts, req.user.id);
+
+    // Ensure isSaved is explicitly true for all saved posts
+    formatted.forEach((p) => {
+      p.isSaved = true;
+    });
+
+    return SuccessHandler(
+      {
+        posts: formatted,
+        count: formatted.length,
+        totalPosts,
+        totalPages: Math.ceil(totalPosts / limit) || 1,
+        currentPage: page,
+      },
+      res,
+      200,
+      "Saved posts fetched successfully",
+      "post-service",
+    );
+  } catch (error) {
+    next(error);
+  }
+}
